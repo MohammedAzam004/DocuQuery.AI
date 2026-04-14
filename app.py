@@ -11,8 +11,9 @@ from src.generate import (
     NO_RELEVANT_INFO_MESSAGE,
     generate_answer,
 )
+from src.ingest import build_document_summary, load_documents
 from src.retrieve import retrieve_chunks
-from src.vector_store import load_document_summary
+from src.vector_store import load_document_summary, load_index, save_document_summary
 
 
 PROJECT_ROOT = Path(__file__).resolve().parent
@@ -200,6 +201,22 @@ def show_setup_status(api_key_ready: bool) -> None:
         st.caption(f"Create a file at {ENV_FILE} and add your Gemini key there.")
 
 
+def get_document_summary() -> list[dict]:
+    """Load the saved document summary, or rebuild it from local files if needed."""
+    documents = load_document_summary(INDEX_FOLDER)
+    if documents:
+        return documents
+
+    try:
+        _, chunks = load_index(INDEX_FOLDER)
+        source_documents = load_documents()
+        documents = build_document_summary(documents=source_documents, chunks=chunks)
+        save_document_summary(documents=documents, index_folder=INDEX_FOLDER)
+        return documents
+    except Exception:
+        return []
+
+
 def show_answer(answer: dict) -> None:
     """Display the final answer section."""
     st.markdown('<div class="section-title">Final Answer</div>', unsafe_allow_html=True)
@@ -270,7 +287,7 @@ def main() -> None:
         st.session_state.last_question = ""
 
     # Load the saved document summary created during indexing.
-    documents = load_document_summary(INDEX_FOLDER)
+    documents = get_document_summary()
 
     if not documents:
         st.error(INDEX_NOT_CREATED_MESSAGE)

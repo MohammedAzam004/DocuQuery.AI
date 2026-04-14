@@ -40,6 +40,15 @@ def save_index(index: faiss.Index, chunks: list[dict], documents: list[dict], in
         json.dump(documents, file, indent=2, ensure_ascii=False)
 
 
+def save_document_summary(documents: list[dict], index_folder: str | Path) -> None:
+    """Save only the document summary file."""
+    index_path = Path(index_folder)
+    index_path.mkdir(parents=True, exist_ok=True)
+
+    with (index_path / DOCUMENTS_FILE_NAME).open("w", encoding="utf-8") as file:
+        json.dump(documents, file, indent=2, ensure_ascii=False)
+
+
 def load_index(index_folder: str | Path) -> tuple[faiss.Index, list[dict]]:
     """Load the saved FAISS index and chunk metadata."""
     index_path = Path(index_folder)

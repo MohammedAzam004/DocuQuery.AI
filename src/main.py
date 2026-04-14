@@ -6,8 +6,9 @@ from pathlib import Path
 from dotenv import load_dotenv
 
 from src.generate import GEMINI_API_KEY_MISSING_MESSAGE, generate_answer
+from src.ingest import build_document_summary, load_documents
 from src.retrieve import retrieve_chunks
-from src.vector_store import load_document_summary
+from src.vector_store import load_document_summary, load_index, save_document_summary
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
@@ -42,7 +43,7 @@ def get_greeting_answer(question: str) -> dict | None:
 
 def print_document_info() -> None:
     """Show which documents are available in the saved index."""
-    documents = load_document_summary(INDEX_FOLDER)
+    documents = get_document_summary()
 
     if not documents:
         print(INDEX_NOT_CREATED_MESSAGE)
@@ -55,6 +56,22 @@ def print_document_info() -> None:
             f'- {document["filename"]} | pages: {document["pages"]} | words: {document.get("words", 0)} '
             f'| chunks: {document["chunks"]} | meets assignment rule: {requirement_status}'
         )
+
+
+def get_document_summary() -> list[dict]:
+    """Load the saved document summary, or rebuild it from local files if needed."""
+    documents = load_document_summary(INDEX_FOLDER)
+    if documents:
+        return documents
+
+    try:
+        _, chunks = load_index(INDEX_FOLDER)
+        source_documents = load_documents()
+        documents = build_document_summary(documents=source_documents, chunks=chunks)
+        save_document_summary(documents=documents, index_folder=INDEX_FOLDER)
+        return documents
+    except Exception:
+        return []
 
 
 def print_retrieved_chunks(retrieved_chunks: list[dict]) -> None:
