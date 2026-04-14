@@ -11,7 +11,7 @@ from src.generate import (
     NO_RELEVANT_INFO_MESSAGE,
     generate_answer,
 )
-from src.ingest import build_document_summary, load_documents
+from src.ingest import build_document_summary, load_documents, run_indexing
 from src.retrieve import retrieve_chunks
 from src.vector_store import load_document_summary, load_index, save_document_summary
 
@@ -31,9 +31,20 @@ st.set_page_config(page_title="DocuQuery AI", page_icon=":page_facing_up:", layo
 
 
 def has_gemini_api_key() -> bool:
-    """Check whether the Gemini API key is available."""
+    """Check whether the Gemini API key is available from env or Streamlit secrets."""
     load_dotenv(dotenv_path=ENV_FILE)
-    return bool(os.getenv("GEMINI_API_KEY"))
+
+    api_key = (os.getenv("GEMINI_API_KEY") or "").strip()
+    if not api_key:
+        try:
+            api_key = str(st.secrets.get("GEMINI_API_KEY", "")).strip()
+        except Exception:
+            api_key = ""
+
+    if api_key:
+        os.environ["GEMINI_API_KEY"] = api_key
+
+    return bool(api_key)
 
 
 def get_greeting_answer(question: str) -> dict | None:
@@ -198,11 +209,13 @@ def show_setup_status(api_key_ready: bool) -> None:
         st.success("Gemini API key detected. The app is ready to answer questions.")
     else:
         st.warning(GEMINI_API_KEY_MISSING_MESSAGE)
-        st.caption(f"Create a file at {ENV_FILE} and add your Gemini key there.")
+        st.caption(
+            f"For local runs, create {ENV_FILE}. For Streamlit Cloud, add GEMINI_API_KEY in app Secrets."
+        )
 
 
 def get_document_summary() -> list[dict]:
-    """Load the saved document summary, or rebuild it from local files if needed."""
+    """Load document summary and auto-build the index when missing."""
     documents = load_document_summary(INDEX_FOLDER)
     if documents:
         return documents
@@ -213,6 +226,12 @@ def get_document_summary() -> list[dict]:
         documents = build_document_summary(documents=source_documents, chunks=chunks)
         save_document_summary(documents=documents, index_folder=INDEX_FOLDER)
         return documents
+    except FileNotFoundError:
+        try:
+            run_indexing()
+            return load_document_summary(INDEX_FOLDER)
+        except Exception:
+            return []
     except Exception:
         return []
 
