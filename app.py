@@ -32,7 +32,7 @@ st.set_page_config(page_title="DocuQuery AI", page_icon=":page_facing_up:", layo
 
 def has_gemini_api_key() -> bool:
     """Check whether the Gemini API key is available from env or Streamlit secrets."""
-    load_dotenv(dotenv_path=ENV_FILE)
+    load_dotenv(dotenv_path=ENV_FILE, override=True)
 
     api_key = (os.getenv("GEMINI_API_KEY") or "").strip()
     if not api_key:

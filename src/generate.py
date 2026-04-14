@@ -21,12 +21,45 @@ GEMINI_API_KEY_MISSING_MESSAGE = (
 GEMINI_REQUEST_FAILED_MESSAGE = (
     "Could not generate an answer right now. Please check your Gemini API key and internet connection, then try again."
 )
+GEMINI_API_KEY_INVALID_MESSAGE = (
+    "Gemini rejected the API key. Verify GEMINI_API_KEY and use a newly generated key if needed."
+)
+GEMINI_QUOTA_EXCEEDED_MESSAGE = (
+    "Gemini quota appears to be exhausted. Check your billing/quota limits and try again later."
+)
+GEMINI_RATE_LIMIT_MESSAGE = (
+    "Too many requests were sent to Gemini. Wait a few seconds and try again."
+)
+GEMINI_MODEL_NOT_AVAILABLE_MESSAGE = (
+    "The requested Gemini model is not available for this key or region. Try again later or use a different model."
+)
 GEMINI_HIGH_DEMAND_MESSAGE = (
     "Gemini is currently under high demand. Please wait a few seconds and try again."
 )
 GEMINI_RESPONSE_INVALID_MESSAGE = (
     "Gemini returned an unreadable response. Please try the question again."
 )
+
+
+def map_gemini_error_message(error: Exception) -> str:
+    """Return a user-facing error message based on the Gemini API error text."""
+    error_text = str(error)
+    normalized = error_text.lower()
+
+    if "503" in error_text or "unavailable" in normalized:
+        return GEMINI_HIGH_DEMAND_MESSAGE
+    if "401" in error_text or "unauthorized" in normalized or "api key not valid" in normalized:
+        return GEMINI_API_KEY_INVALID_MESSAGE
+    if "403" in error_text and ("api key" in normalized or "permission" in normalized):
+        return GEMINI_API_KEY_INVALID_MESSAGE
+    if "429" in error_text or "rate limit" in normalized or "too many requests" in normalized:
+        return GEMINI_RATE_LIMIT_MESSAGE
+    if "quota" in normalized or "resource_exhausted" in normalized:
+        return GEMINI_QUOTA_EXCEEDED_MESSAGE
+    if "404" in error_text or "model" in normalized and ("not found" in normalized or "not available" in normalized):
+        return GEMINI_MODEL_NOT_AVAILABLE_MESSAGE
+
+    return GEMINI_REQUEST_FAILED_MESSAGE
 
 
 def build_valid_citations(retrieved_chunks: list[dict]) -> list[str]:
@@ -103,7 +136,7 @@ def generate_answer(question: str, retrieved_chunks: list[dict]) -> dict:
             "citations": [],
         }
 
-    load_dotenv(dotenv_path=ENV_FILE)
+    load_dotenv(dotenv_path=ENV_FILE, override=True)
 
     api_key = os.getenv("GEMINI_API_KEY")
     if not api_key:
@@ -127,15 +160,15 @@ def generate_answer(question: str, retrieved_chunks: list[dict]) -> dict:
             )
             break
         except Exception as error:
-            error_text = str(error)
+            mapped_message = map_gemini_error_message(error)
 
-            if "503" in error_text or "UNAVAILABLE" in error_text:
+            if mapped_message == GEMINI_HIGH_DEMAND_MESSAGE:
                 if attempt < 2:
                     time.sleep(2 * (attempt + 1))
                     continue
-                raise RuntimeError(GEMINI_HIGH_DEMAND_MESSAGE) from error
+                raise RuntimeError(mapped_message) from error
 
-            raise RuntimeError(GEMINI_REQUEST_FAILED_MESSAGE) from error
+            raise RuntimeError(mapped_message) from error
 
     try:
         response_text = (response.text or "").strip()
