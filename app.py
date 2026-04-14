@@ -32,6 +32,11 @@ st.set_page_config(page_title="DocuQuery AI", page_icon=":page_facing_up:", layo
 
 def has_gemini_api_key() -> bool:
     """Check whether the Gemini API key is available from env or Streamlit secrets."""
+    custom_key = str(st.session_state.get("custom_gemini_api_key", "")).strip()
+    if custom_key:
+        os.environ["GEMINI_API_KEY"] = custom_key
+        return True
+
     load_dotenv(dotenv_path=ENV_FILE, override=True)
 
     api_key = (os.getenv("GEMINI_API_KEY") or "").strip()
@@ -65,49 +70,116 @@ def add_custom_css() -> None:
     st.markdown(
         """
         <style>
+            @import url('https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700;800&family=Source+Sans+3:wght@400;600;700&display=swap');
+
+            :root {
+                --bg-top: #f4f7ff;
+                --bg-bottom: #dbe7ff;
+                --ink-strong: #0f1f3d;
+                --ink-body: #1f335a;
+                --ink-soft: #4a5f87;
+                --panel: rgba(255, 255, 255, 0.96);
+                --panel-border: #c8d8f5;
+                --accent: #1967d2;
+                --accent-hover: #0f56ba;
+            }
+
             .stApp {
-                background: linear-gradient(180deg, #f7f9fc 0%, #eef2f7 100%);
-                color: #102033;
+                background:
+                    radial-gradient(circle at 8% 12%, rgba(125, 165, 255, 0.28), transparent 28%),
+                    radial-gradient(circle at 85% 10%, rgba(92, 212, 188, 0.2), transparent 24%),
+                    linear-gradient(180deg, var(--bg-top) 0%, var(--bg-bottom) 100%);
+                color: var(--ink-strong);
+                font-family: 'Source Sans 3', sans-serif;
             }
             .hero-card, .info-card, .answer-card, .source-card {
-                background: rgba(255, 255, 255, 0.9);
-                border: 1px solid #dde5f0;
+                background: var(--panel);
+                border: 1px solid var(--panel-border);
                 border-radius: 18px;
                 padding: 20px;
-                box-shadow: 0 10px 30px rgba(15, 23, 42, 0.06);
+                box-shadow: 0 14px 34px rgba(18, 49, 105, 0.12);
                 animation: fadeUp 0.5s ease;
             }
             .hero-title {
                 font-size: 2.1rem;
-                font-weight: 700;
-                color: #15304f;
+                font-weight: 800;
+                font-family: 'Sora', sans-serif;
+                color: var(--ink-strong);
                 margin-bottom: 0.4rem;
             }
             .hero-text {
-                color: #45556d;
+                color: var(--ink-body);
                 font-size: 1rem;
                 line-height: 1.6;
             }
             .metric-value {
                 font-size: 1.8rem;
-                font-weight: 700;
-                color: #15304f;
+                font-weight: 800;
+                font-family: 'Sora', sans-serif;
+                color: var(--ink-strong);
                 margin-bottom: 0.2rem;
             }
             .metric-label {
-                color: #607089;
+                color: var(--ink-soft);
                 font-size: 0.95rem;
             }
             .section-title {
                 font-size: 1.2rem;
-                font-weight: 700;
-                color: #15304f;
+                font-weight: 800;
+                font-family: 'Sora', sans-serif;
+                color: var(--ink-strong);
                 margin-bottom: 0.7rem;
             }
             .chunk-box {
-                border-left: 4px solid #4c8bf5;
+                color: var(--ink-body);
+                border-left: 4px solid var(--accent);
                 padding-left: 14px;
                 margin-bottom: 14px;
+            }
+            .answer-card, .source-card, .info-card {
+                color: var(--ink-body);
+            }
+            .stTextInput input {
+                background: #ffffff !important;
+                color: var(--ink-strong) !important;
+                border: 1.4px solid #b7ccf3 !important;
+                border-radius: 12px !important;
+            }
+            .stTextInput input::placeholder {
+                color: #667da8 !important;
+                opacity: 1 !important;
+            }
+            .stTextInput input:focus {
+                border-color: var(--accent) !important;
+                box-shadow: 0 0 0 0.2rem rgba(25, 103, 210, 0.16) !important;
+            }
+            .stButton > button,
+            .stFormSubmitButton > button {
+                background: linear-gradient(135deg, var(--accent), #2281ff) !important;
+                color: #ffffff !important;
+                border: none !important;
+                border-radius: 12px !important;
+                font-weight: 700 !important;
+                font-family: 'Sora', sans-serif !important;
+            }
+            .stButton > button:hover,
+            .stFormSubmitButton > button:hover {
+                background: linear-gradient(135deg, var(--accent-hover), var(--accent)) !important;
+                color: #ffffff !important;
+            }
+            .stCaption {
+                color: var(--ink-soft) !important;
+            }
+            .stAlert {
+                color: var(--ink-strong) !important;
+                margin-top: 12px !important;
+            }
+            .stAlert [data-testid="stMarkdownContainer"] p {
+                color: #111111 !important;
+                font-weight: 600 !important;
+            }
+            .status-section-gap {
+                height: 16px;
             }
             @keyframes fadeUp {
                 from {
@@ -203,6 +275,7 @@ def show_document_info(documents: list[dict]) -> None:
 
 def show_setup_status(api_key_ready: bool) -> None:
     """Show simple setup status for the user."""
+    st.markdown('<div class="status-section-gap"></div>', unsafe_allow_html=True)
     st.markdown('<div class="section-title">System Status</div>', unsafe_allow_html=True)
 
     if api_key_ready:
@@ -302,8 +375,16 @@ def main() -> None:
         st.session_state.answer = None
     if "retrieved_chunks" not in st.session_state:
         st.session_state.retrieved_chunks = []
-    if "last_question" not in st.session_state:
-        st.session_state.last_question = ""
+    if "question_input" not in st.session_state:
+        st.session_state.question_input = ""
+    if "pending_question_clear" not in st.session_state:
+        st.session_state.pending_question_clear = False
+    if "custom_gemini_api_key" not in st.session_state:
+        st.session_state.custom_gemini_api_key = ""
+
+    if st.session_state.pending_question_clear:
+        st.session_state.question_input = ""
+        st.session_state.pending_question_clear = False
 
     documents = get_document_summary()
 
@@ -327,13 +408,19 @@ def main() -> None:
                 "Question",
                 placeholder="Example: What are the strongest defenses recommended for a small team?",
                 label_visibility="collapsed",
-                value=st.session_state.last_question,
+                key="question_input",
             )
-            submitted = st.form_submit_button("Get Answer", type="primary", use_container_width=True)
+            button_col1, button_col2 = st.columns(2)
+            with button_col1:
+                submitted = st.form_submit_button("Get Answer", type="primary", use_container_width=True)
+            with button_col2:
+                clear_clicked = st.form_submit_button("Clear", use_container_width=True)
+
+        if clear_clicked:
+            st.session_state.pending_question_clear = True
+            st.rerun()
 
         if submitted:
-            st.session_state.last_question = question
-
             if not question.strip():
                 st.warning("Please enter a question first.")
             else:
@@ -362,6 +449,32 @@ def main() -> None:
 
                     st.session_state.answer = answer
                     st.session_state.retrieved_chunks = retrieved_chunks
+
+            st.session_state.pending_question_clear = True
+            st.rerun()
+
+        st.markdown("")
+        st.markdown('<div class="section-title">Use Your Own Gemini API Key (Optional)</div>', unsafe_allow_html=True)
+        st.caption(
+            "If your Gemini API key credits are exhausted, use this block to add your own key and continue using this bot."
+        )
+
+        custom_key_input = st.text_input(
+            "Gemini API Key",
+            type="password",
+            placeholder="Paste your Gemini API key here",
+            key="custom_gemini_api_key_input",
+        )
+        use_custom_key = st.button("Use This API Key", use_container_width=True)
+
+        if use_custom_key:
+            if custom_key_input.strip():
+                st.session_state.custom_gemini_api_key = custom_key_input.strip()
+                os.environ["GEMINI_API_KEY"] = st.session_state.custom_gemini_api_key
+                st.success("Custom Gemini API key saved for this session.")
+                st.rerun()
+            else:
+                st.warning("Please paste a Gemini API key first.")
 
         if st.session_state.answer is not None:
             show_answer(st.session_state.answer)
