@@ -34,7 +34,7 @@ Note: the virtual environment is created locally during setup and is ignored by 
 ## Project Structure
 
 ```text
-rag-doc-bot/
+DocuQuery.AI/
 |-- data/                # knowledge base documents
 |-- faiss_index/         # generated locally after running ingestion
 |-- src/
@@ -112,7 +112,7 @@ The `faiss_index/` folder is generated locally after running the ingestion step.
 
 ```bash
 git clone <your-repo-url>
-cd rag-doc-bot
+cd DocuQuery.AI
 ```
 
 ### 2. Create a virtual environment

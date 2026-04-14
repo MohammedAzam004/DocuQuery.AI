@@ -162,7 +162,10 @@ def generate_answer(question: str, retrieved_chunks: list[dict]) -> dict:
             "citations": [],
         }
 
-    filtered_citations = [citation for citation in result.get("citations", []) if citation in valid_citations]
+    filtered_citations: list[str] = []
+    for citation in result.get("citations", []):
+        if citation in valid_citations and citation not in filtered_citations:
+            filtered_citations.append(citation)
 
     if not filtered_citations:
         filtered_citations = valid_citations[:2]
