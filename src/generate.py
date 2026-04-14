@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import time
 from pathlib import Path
 
@@ -60,6 +61,13 @@ def map_gemini_error_message(error: Exception) -> str:
         return GEMINI_MODEL_NOT_AVAILABLE_MESSAGE
 
     return GEMINI_REQUEST_FAILED_MESSAGE
+
+
+def sanitize_error_text(error: Exception) -> str:
+    """Return a short, sanitized version of the raw error text for debugging."""
+    text = str(error).replace("\n", " ").strip()
+    text = re.sub(r"AIza[0-9A-Za-z_-]{35}", "AIza***REDACTED***", text)
+    return text[:220]
 
 
 def build_valid_citations(retrieved_chunks: list[dict]) -> list[str]:
@@ -167,6 +175,10 @@ def generate_answer(question: str, retrieved_chunks: list[dict]) -> dict:
                     time.sleep(2 * (attempt + 1))
                     continue
                 raise RuntimeError(mapped_message) from error
+
+            if mapped_message == GEMINI_REQUEST_FAILED_MESSAGE:
+                details = sanitize_error_text(error)
+                raise RuntimeError(f"{mapped_message} Details: {details}") from error
 
             raise RuntimeError(mapped_message) from error
 
