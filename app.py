@@ -305,7 +305,6 @@ def main() -> None:
     if "last_question" not in st.session_state:
         st.session_state.last_question = ""
 
-    # Load the saved document summary created during indexing.
     documents = get_document_summary()
 
     if not documents:
@@ -346,9 +345,7 @@ def main() -> None:
                 else:
                     try:
                         with st.spinner("Searching the documents and writing a grounded answer..."):
-                            # Step 1: retrieve the best matching chunks from FAISS.
                             retrieved_chunks = retrieve_chunks(question=question, index_folder=INDEX_FOLDER, k=5)
-                            # Step 2: send only those chunks to Gemini for a grounded answer.
                             answer = generate_answer(question=question, retrieved_chunks=retrieved_chunks)
                     except FileNotFoundError:
                         st.error(INDEX_NOT_CREATED_MESSAGE)

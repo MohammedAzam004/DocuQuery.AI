@@ -97,7 +97,6 @@ def load_docx(file_path: Path) -> list[dict]:
 
 def load_documents(data_folder: Path = DATA_FOLDER) -> list[dict]:
     """Load all supported files from the data folder."""
-    # We keep the file discovery simple so it is easy to explain.
     supported_files = sorted(
         [
             file_path
@@ -109,7 +108,6 @@ def load_documents(data_folder: Path = DATA_FOLDER) -> list[dict]:
     all_documents: list[dict] = []
 
     for file_path in supported_files:
-        # Pick the right loader based on the file type.
         if file_path.suffix.lower() == ".pdf":
             all_documents.extend(load_pdf(file_path))
         elif file_path.suffix.lower() == ".txt":
@@ -161,12 +159,10 @@ def run_indexing() -> None:
     print(f"Loaded {len(documents)} page-level records.")
 
     print("Creating chunks...")
-    # The assignment asks for 500-character chunks with 100-character overlap.
     chunks = create_chunks(documents=documents, chunk_size=500, overlap=100)
     print(f"Created {len(chunks)} chunks.")
 
     print("Embedding chunks in batches...")
-    # We send the full chunk list to the embedding model in batches, not one by one.
     chunk_texts = [chunk["text"] for chunk in chunks]
     embeddings = embed_texts(chunk_texts, batch_size=32)
 
@@ -174,7 +170,6 @@ def run_indexing() -> None:
     index = create_faiss_index(embeddings)
 
     print("Saving index to disk...")
-    # Save both the FAISS file and the metadata files so querying stays separate.
     document_summary = build_document_summary(documents=documents, chunks=chunks)
     save_index(index=index, chunks=chunks, documents=document_summary, index_folder=INDEX_FOLDER)
 

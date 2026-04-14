@@ -46,7 +46,6 @@ def build_context(retrieved_chunks: list[dict]) -> str:
     context_parts: list[str] = []
 
     for source_number, chunk in enumerate(retrieved_chunks, start=1):
-        # Each chunk includes its source file and page number.
         context_parts.append(
             "\n".join(
                 [
@@ -116,7 +115,6 @@ def generate_answer(question: str, retrieved_chunks: list[dict]) -> dict:
     client = genai.Client(api_key=api_key)
     response = None
 
-    # Ask Gemini for JSON so the UI can display the answer and citations cleanly.
     for attempt in range(3):
         try:
             response = client.models.generate_content(
@@ -139,7 +137,6 @@ def generate_answer(question: str, retrieved_chunks: list[dict]) -> dict:
 
             raise RuntimeError(GEMINI_REQUEST_FAILED_MESSAGE) from error
 
-    # Convert the JSON text from Gemini into a normal Python dictionary.
     try:
         response_text = (response.text or "").strip()
         if response_text.startswith("```json"):

@@ -5,9 +5,6 @@ from functools import lru_cache
 
 import numpy as np
 
-# This project uses Sentence Transformers with PyTorch only.
-# We disable optional TensorFlow loading so Keras 3 packages in other environments
-# do not interfere with a simple embedding workflow.
 os.environ.setdefault("USE_TF", "0")
 os.environ.setdefault("TRANSFORMERS_NO_TF", "1")
 
@@ -24,15 +21,14 @@ EMBEDDING_MODEL_ERROR_MESSAGE = (
 transformers_logging.set_verbosity_error()
 
 
+
 @lru_cache(maxsize=1)
 def load_embedding_model() -> SentenceTransformer:
     """Load the embedding model once and reuse it."""
     try:
-        # Prefer the local cached model so normal queries do not make extra network requests.
         return SentenceTransformer(EMBEDDING_MODEL_NAME, local_files_only=True)
     except Exception:
         try:
-            # If the model is not cached yet, allow the first run to download it.
             return SentenceTransformer(EMBEDDING_MODEL_NAME)
         except Exception as error:
             raise RuntimeError(EMBEDDING_MODEL_ERROR_MESSAGE) from error

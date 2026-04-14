@@ -1,20 +1,18 @@
 from __future__ import annotations
 
-
+    
 def split_text_into_chunks(text: str, chunk_size: int = 500, overlap: int = 100) -> list[str]:
     """Split one text string into fixed-size chunks with overlap."""
     chunks: list[str] = []
     start = 0
 
     while start < len(text):
-        # If the new chunk starts in the middle of a word,
-        # move to the next space so the text stays readable.
         if start > 0 and text[start - 1] != " " and text[start] != " ":
             while start < len(text) and text[start] != " ":
                 start += 1
 
         end = start + chunk_size
-        if end < len(text):
+        if end < len(text): 
             adjusted_end = end
             while adjusted_end > start and text[adjusted_end - 1] != " ":
                 adjusted_end -= 1
@@ -30,7 +28,6 @@ def split_text_into_chunks(text: str, chunk_size: int = 500, overlap: int = 100)
         if end >= len(text):
             break
 
-        # Move forward but keep a little overlap so nearby context is not lost.
         start = end - overlap
 
     return chunks
@@ -45,7 +42,6 @@ def create_chunks(
     all_chunks: list[dict] = []
 
     for document in documents:
-        # Chunk each page separately so the page number stays correct.
         text_chunks = split_text_into_chunks(
             text=document["text"],
             chunk_size=chunk_size,
@@ -53,7 +49,6 @@ def create_chunks(
         )
 
         for chunk_number, chunk_text in enumerate(text_chunks, start=1):
-            # Save the chunk text together with metadata needed for citations.
             all_chunks.append(
                 {
                     "chunk_id": f'{document["filename"]}_page_{document["page_number"]}_chunk_{chunk_number}',
